@@ -19,7 +19,7 @@
 
 ### What Is This?
 
-Windows 11 shows a "Location In Use" icon (a circle/dot) in the system tray whenever any app accesses your location. The icon **disappears and reappears** whenever an app starts or stops using location, causing a distracting blink.
+Windows 11 shows a "Location In Use" icon (an arrow) in the system tray whenever any app accesses your location. The icon **disappears and reappears** whenever an app starts or stops using location, causing a distracting blink.
 
 **LocationGlue** maintains a lightweight, persistent location session so the icon stays **always visible** — no blinking, no distraction.
 
@@ -84,7 +84,7 @@ C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe `
 
 ### 这是什么？
 
-Windows 11 在系统托盘区显示一个"位置正在使用"图标（一个圆点）。每当任何应用访问位置时，图标就会出现/消失，造成**闪烁**，非常分散注意力。
+Windows 11 在系统托盘区显示一个"位置正在使用"图标（一个箭头）。每当任何应用访问位置时，图标就会出现/消失，造成**闪烁**，非常分散注意力。
 
 **LocationGlue** 维持一个轻量、持久的位置会话，让图标**始终可见**——不再闪烁、不再干扰。
 
