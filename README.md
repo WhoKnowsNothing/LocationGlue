@@ -38,17 +38,14 @@ Instead of fighting Windows to hide the icon (which doesn't work reliably on new
 
 ### Quick Start
 
-**Double-click `Setup.cmd`** — it auto-detects your install state and guides you:
+**Double-click `Setup.cmd`** — the only file you need. It auto-detects your install state:
 
 - **Not installed?** Press `I` to install and start immediately.
 - **Already installed?** Press `U` to uninstall, `S` for status, `R` to reinstall.
 
-That's it. One file, two choices.
+One file, one click. Done.
 
-> **Alternative methods** (if you prefer the terminal):
-> - `install.bat` / `uninstall.bat` — direct scripts for each action
-> - `LocationSteady.exe install|uninstall|status` — command-line control
-> - `powershell -File src\InstallSteady.ps1 -Command install` — PowerShell
+> **Terminal users:** `LocationSteady.exe install|uninstall|status` works directly, or `powershell -File src\InstallSteady.ps1 -Command install`.
 
 ### Build from Source
 
@@ -103,17 +100,14 @@ Windows 11 在系统托盘区显示一个"位置正在使用"图标（一个箭�
 
 ### 快速开始
 
-**双击 `Setup.cmd`** — 自动检测安装状态并引导操作：
+**双击 `Setup.cmd`** — 唯一需要的文件，自动检测安装状态：
 
 - **未安装？** 按 `I` 安装并立即启动。
 - **已安装？** 按 `U` 卸载、`S` 查看状态、`R` 重新安装。
 
-就这么简单。一个文件，两个选择。
+一个文件，一键搞定。
 
-> **其他方式**（如果你更喜欢终端）：
-> - `install.bat` / `uninstall.bat` — 直接执行安装/卸载
-> - `LocationSteady.exe install|uninstall|status` — 命令行控制
-> - `powershell -File src\InstallSteady.ps1 -Command install` — PowerShell
+> **终端用户:** `LocationSteady.exe install|uninstall|status` 直接可用，或 `powershell -File src\InstallSteady.ps1 -Command install`。
 
 ### 从源码编译
 

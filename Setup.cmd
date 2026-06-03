@@ -3,9 +3,8 @@ setlocal enabledelayedexpansion
 title LocationGlue Setup
 
 :: ==============================================
-:: LocationGlue — Setup (Smart Entry Point)
-:: Auto-detects state: installed → offer uninstall
-::                    not installed → offer install
+:: LocationGlue - Setup (Smart Entry Point)
+:: Auto-detects state and offers the right action
 :: ==============================================
 
 :: Locate LocationSteady.exe
@@ -24,7 +23,7 @@ set "RUNNING=!ERRORLEVEL!"
 cls
 echo.
 echo  ============================================
-echo    LocationGlue v1.0.0 — Setup
+echo    LocationGlue v1.1.0 - Setup
 echo    Keep Windows 11 location icon always visible
 echo  ============================================
 echo.
@@ -38,9 +37,9 @@ if "!INSTALLED!"=="1" (
     )
     echo.
     echo  ------------------------------------------
-    echo   [U] Uninstall  — Remove from system
-    echo   [S] Status     — Show detailed information
-    echo   [R] Reinstall  — Repair installation
+    echo   [U] Uninstall  - Remove from system
+    echo   [S] Status     - Show detailed information
+    echo   [R] Reinstall  - Repair installation
     echo   [Q] Quit
     echo  ------------------------------------------
     echo.
@@ -57,7 +56,7 @@ if "!INSTALLED!"=="1" (
     echo  so it stops blinking when apps use your location.
     echo.
     echo  ------------------------------------------
-    echo   [I] Install    — Set up LocationGlue
+    echo   [I] Install    - Set up LocationGlue
     echo   [Q] Quit
     echo  ------------------------------------------
     echo.
@@ -125,7 +124,7 @@ goto :eof
     if exist "!EXE!" (
         "!EXE!" status
     ) else (
-        echo  [WARN] LocationSteady.exe not found — cannot show detailed status.
+        echo  [WARN] LocationSteady.exe not found - cannot show detailed status.
         echo.
         if exist "!SHORTCUT!" (
             echo  Startup shortcut: [INSTALLED]
