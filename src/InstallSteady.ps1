@@ -1,7 +1,8 @@
 <#
 .SYNOPSIS
-    Install LocationSteady to keep the location icon always visible.
-    Creates a startup shortcut so it runs minimized at every logon.
+    [ALTERNATIVE METHOD] Install LocationSteady via PowerShell.
+    For most users, double-clicking Setup.cmd is recommended instead.
+    This script is for advanced users who prefer the command line.
 #>
 
 param(

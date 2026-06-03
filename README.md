@@ -36,30 +36,19 @@ Instead of fighting Windows to hide the icon (which doesn't work reliably on new
 | Dependencies | .NET Framework 4.8 (built into Windows 11) |
 | Battery impact | Minimal (30-min interval, low accuracy) |
 
-### One-Click Install
+### Quick Start
 
-**Double-click `install.bat`** — or run in terminal:
+**Double-click `Setup.cmd`** — it auto-detects your install state and guides you:
 
-```powershell
-# PowerShell (recommended)
-powershell -NoProfile -ExecutionPolicy Bypass -File "src\InstallSteady.ps1" -Command install
-```
+- **Not installed?** Press `I` to install and start immediately.
+- **Already installed?** Press `U` to uninstall, `S` for status, `R` to reinstall.
 
-This creates a Startup folder shortcut so LocationSteady runs automatically at every logon, and starts it immediately.
+That's it. One file, two choices.
 
-### One-Click Uninstall
-
-**Double-click `uninstall.bat`** — or run in terminal:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "src\InstallSteady.ps1" -Command uninstall
-```
-
-### Check Status
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "src\InstallSteady.ps1" -Command status
-```
+> **Alternative methods** (if you prefer the terminal):
+> - `install.bat` / `uninstall.bat` — direct scripts for each action
+> - `LocationSteady.exe install|uninstall|status` — command-line control
+> - `powershell -File src\InstallSteady.ps1 -Command install` — PowerShell
 
 ### Build from Source
 
@@ -112,29 +101,19 @@ Windows 11 在系统托盘区显示一个"位置正在使用"图标（一个圆�
 | 依赖 | .NET Framework 4.8（Windows 11 内置） |
 | 电池影响 | 极低（30 分钟间隔，低精度） |
 
-### 一键安装
+### 快速开始
 
-**双击 `install.bat`** —— 或在终端运行：
+**双击 `Setup.cmd`** — 自动检测安装状态并引导操作：
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "src\InstallSteady.ps1" -Command install
-```
+- **未安装？** 按 `I` 安装并立即启动。
+- **已安装？** 按 `U` 卸载、`S` 查看状态、`R` 重新安装。
 
-会在启动文件夹创建快捷方式，每次登录时自动启动，并立即运行。
+就这么简单。一个文件，两个选择。
 
-### 一键卸载
-
-**双击 `uninstall.bat`** —— 或在终端运行：
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "src\InstallSteady.ps1" -Command uninstall
-```
-
-### 查看状态
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "src\InstallSteady.ps1" -Command status
-```
+> **其他方式**（如果你更喜欢终端）：
+> - `install.bat` / `uninstall.bat` — 直接执行安装/卸载
+> - `LocationSteady.exe install|uninstall|status` — 命令行控制
+> - `powershell -File src\InstallSteady.ps1 -Command install` — PowerShell
 
 ### 从源码编译
 
