@@ -28,3 +28,6 @@ $RECYCLE.BIN/
 *.swp
 *.swo
 *~
+
+# Worktrees
+.worktrees/
