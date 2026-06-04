@@ -16,8 +16,7 @@ $TaskName = "LocationGlue"
 # Paths: exe lives next to this script
 $ScriptDir = Split-Path -Parent $PSCommandPath
 $ExePath = Join-Path $ScriptDir $ExeName
-$StartupDir = [Environment]::GetFolderPath("Startup")
-$ShortcutPath = Join-Path $StartupDir "LocationGlue.lnk"
+$LegacyShortcut = Join-Path ([Environment]::GetFolderPath("Startup")) "LocationGlue.lnk"
 
 function Install-Steady {
     Write-Host "=== LocationGlue Install ===" -ForegroundColor Cyan
@@ -27,28 +26,32 @@ function Install-Steady {
         return
     }
 
-    # Create a shortcut in the Startup folder that runs minimized
-    $WshShell = New-Object -ComObject WScript.Shell
-    $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
-    $Shortcut.TargetPath = $ExePath
-    $Shortcut.Arguments = "run"
-    $Shortcut.WindowStyle = 7  # Normal window (WinExe has no window anyway)
-    $Shortcut.WorkingDirectory = $ScriptDir
-    $Shortcut.Save()
+    # Remove legacy Startup shortcut if present
+    if (Test-Path $LegacyShortcut) {
+        Remove-Item $LegacyShortcut -Force
+        Write-Host "[INFO] Removed legacy Startup shortcut"
+    }
 
-    Write-Host "[OK]  Startup shortcut created: $ShortcutPath" -ForegroundColor Green
-    Write-Host "[INFO] LocationGlue will start minimized at every logon."
-    Write-Host "[TIP]  Log out and back in, or run the exe directly:"
-    Write-Host "       $ExePath"
+    # Create scheduled task for auto-start at logon
+    $action = New-ScheduledTaskAction -Execute $ExePath -Argument "run"
+    $trigger = New-ScheduledTaskTrigger -AtLogOn
+    $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
+    $settings = New-ScheduledTaskSettingsSet -DisallowStartIfOnBatteries:$false -StopIfGoingOnBatteries:$false -ExecutionTimeLimit 0 -Hidden
+
+    try {
+        Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+        Write-Host "[OK]  Scheduled task '$TaskName' created." -ForegroundColor Green
+        Write-Host "[INFO] LocationGlue will start automatically at every logon."
+    }
+    catch {
+        Write-Host "[ERR] Failed to create scheduled task: $_" -ForegroundColor Red
+        return
+    }
 
     # Also run it now
     Write-Host ""
     Write-Host "[INFO] Starting LocationGlue now..."
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = $ExePath
-    $psi.Arguments = "run"
-    $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Minimized
-    [System.Diagnostics.Process]::Start($psi) | Out-Null
+    Start-Process -FilePath $ExePath -ArgumentList "run" -WindowStyle Hidden
     Write-Host "[OK]  LocationGlue started. Location icon should now be always visible." -ForegroundColor Green
 }
 
@@ -59,12 +62,19 @@ function Uninstall-Steady {
     Get-Process -Name "LocationGlue" -ErrorAction SilentlyContinue | Stop-Process -Force
     Write-Host "[OK]  Stopped running instances"
 
-    # Remove startup shortcut
-    if (Test-Path $ShortcutPath) {
-        Remove-Item $ShortcutPath -Force
-        Write-Host "[OK]  Startup shortcut removed"
-    } else {
-        Write-Host "[INFO] No startup shortcut found"
+    # Remove scheduled task
+    try {
+        Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+        Write-Host "[OK]  Scheduled task removed"
+    }
+    catch {
+        Write-Host "[INFO] No scheduled task to remove"
+    }
+
+    # Remove legacy shortcut
+    if (Test-Path $LegacyShortcut) {
+        Remove-Item $LegacyShortcut -Force
+        Write-Host "[OK]  Legacy Startup shortcut removed"
     }
 
     Write-Host "[DONE] LocationGlue uninstalled." -ForegroundColor Green
@@ -74,11 +84,18 @@ function Show-Status {
     Write-Host "=== LocationGlue Status ===" -ForegroundColor Cyan
     Write-Host ""
 
-    # Startup shortcut
-    if (Test-Path $ShortcutPath) {
-        Write-Host "  Startup shortcut: [INSTALLED]"
-    } else {
-        Write-Host "  Startup shortcut: [not installed]"
+    # Scheduled task
+    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    if ($task) {
+        Write-Host "  Auto-start:     [INSTALLED]  (Task Scheduler: $TaskName)"
+    }
+    else {
+        Write-Host "  Auto-start:     [not installed]"
+    }
+
+    # Legacy shortcut
+    if (Test-Path $LegacyShortcut) {
+        Write-Host "  Legacy shortcut: [EXISTS — run install to migrate]"
     }
 
     # Running instances
@@ -93,7 +110,8 @@ function Show-Status {
     # Exe location
     if (Test-Path $ExePath) {
         Write-Host "  Executable: $ExePath"
-    } else {
+    }
+    else {
         Write-Host "  Executable: [MISSING — $ExePath]"
     }
 }

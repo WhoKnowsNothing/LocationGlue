@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] — 2026-06-04
+
+### Changed
+
+- **Auto-start: Task Scheduler replaces Startup folder shortcut.** More reliable — Startup folder can be delayed/skipped by Windows 11; Task Scheduler `At logon` trigger is guaranteed.
+- **`-target:winexe` replaces `-target:exe`.** No more console window. The process runs silently in the background with zero visible UI.
+
+### Added
+
+- **Legacy shortcut cleanup.** Install now auto-removes any leftover Startup folder shortcut from v1.1.x.
+- **Scheduled task XML template.** Uses `schtasks /create /xml` for robust quoting (paths with spaces).
+
+### Fixed
+
+- **Startup window flash.** v1.1.2's console subsystem caused a visible window at every logon — gone now.
+- **Auto-start reliability.** Task Scheduler is not subject to the same delays/skips as the Startup folder.
+
+---
+
 ## [1.1.2] — 2026-06-04
 
 ### Changed

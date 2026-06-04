@@ -3,20 +3,62 @@
  * .NET Framework 4.8 version — uses system runtime (~5-10MB, shared across all .NET apps).
  *
  * Uses System.Device.Location.GeoCoordinateWatcher (no WinRT needed).
+ *
+ * v1.2.0 — Task Scheduler for auto-start (more reliable than Startup folder),
+ *          reverted to winexe (no console window).
  */
 
 using System;
 using System.Device.Location;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Security.Principal;
 using System.Threading;
 
 class LocationGlue
 {
-    const string TaskName = "LocationGlue";
+    const string TaskName   = "LocationGlue";
+
+    [DllImport("kernel32.dll")]
+    static extern bool AttachConsole(int dwProcessId);
+    [DllImport("kernel32.dll")]
+    static extern bool AllocConsole();
+
+    const int ATTACH_PARENT_PROCESS = -1;
+    const string TaskXmlFmt = @"<?xml version=""1.0"" encoding=""UTF-16""?>
+<Task version=""1.2"" xmlns=""http://schemas.microsoft.com/windows/2004/02/mit/task"">
+  <Triggers>
+    <LogonTrigger/>
+  </Triggers>
+  <Principals>
+    <Principal id=""Author"">
+      <UserId>{0}</UserId>
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <Hidden>true</Hidden>
+  </Settings>
+  <Actions Context=""Author"">
+    <Exec>
+      <Command>""{1}""</Command>
+      <Arguments>run</Arguments>
+    </Exec>
+  </Actions>
+</Task>";
 
     static void Main(string[] args)
     {
         string cmd = args.Length > 0 ? args[0].ToLower() : "run";
+
+        // For non-run commands, attach to parent console so output is visible.
+        // The "run" command deliberately skips this → no window at logon.
+        if (cmd != "run" && !AttachConsole(ATTACH_PARENT_PROCESS))
+            AllocConsole();
 
         switch (cmd)
         {
@@ -24,16 +66,16 @@ class LocationGlue
             case "install":   Install(); break;
             case "uninstall": Uninstall(); break;
             case "status":    Status(); break;
+            case "setup":     SetupInteractive(); break;
             default:          PrintUsage(); break;
         }
     }
 
     static void RunForeground()
     {
-        Console.WriteLine("[LG] LocationGlue — keeping location icon always visible");
-        Console.WriteLine("[LG] Press Ctrl+C to stop.");
-
         bool running = true;
+
+        // Ctrl+C handler — only fires when run from terminal
         Console.CancelKeyPress += (s, e) =>
         {
             e.Cancel = true;
@@ -48,7 +90,7 @@ class LocationGlue
             watcher.MovementThreshold = 10000; // 10km — almost never fires
             watcher.StatusChanged += (s, e) =>
             {
-                Console.WriteLine("[LG] Status: {0}", e.Status);
+                // Quiet — winexe has no console to write to
             };
             watcher.PositionChanged += (s, e) =>
             {
@@ -56,63 +98,132 @@ class LocationGlue
             };
 
             watcher.Start();
-            Console.WriteLine("[LG] Location watcher started (status: {0})", watcher.Status);
-
-            if (watcher.Status == GeoPositionStatus.NoData || watcher.Status == GeoPositionStatus.Ready)
-            {
-                Console.WriteLine("[LG] Location icon should now be visible.");
-            }
 
             // Keep alive until shutdown signal or Ctrl+C
             while (running)
             {
-                // Wait 1 second or until shutdown is signaled by the uninstaller
                 int signaled = WaitHandle.WaitAny(new WaitHandle[] { shutdownEvent }, 1000);
-                if (signaled == 0)
-                {
-                    Console.WriteLine("[LG] Shutdown signal received, stopping gracefully...");
-                    break;
-                }
+                if (signaled == 0) break;
 
                 // Periodically check if watcher is still healthy
                 if (watcher.Status == GeoPositionStatus.Disabled || watcher.Status == GeoPositionStatus.NoData)
                 {
                     watcher.Stop();
                     Thread.Sleep(2000);
-                    if (shutdownEvent.WaitOne(0)) break; // Don't restart if shutdown was signaled
+                    if (shutdownEvent.WaitOne(0)) break;
                     watcher.Start();
-                    Console.WriteLine("[LG] Restarted watcher (status was: {0})", watcher.Status);
                 }
             }
 
             watcher.Stop();
         }
+    }
 
-        Console.WriteLine("[LG] LocationGlue stopped.");
+    static string GetExePath()
+    {
+        return Process.GetCurrentProcess().MainModule.FileName;
+    }
+
+    static bool IsElevated()
+    {
+        using (var identity = WindowsIdentity.GetCurrent())
+        {
+            var principal = new WindowsPrincipal(identity);
+            return principal.IsInRole(WindowsBuiltInRole.Administrator);
+        }
     }
 
     static void Install()
     {
-        string exePath = Process.GetCurrentProcess().MainModule.FileName;
-        string startupDir = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
-        string shortcutPath = System.IO.Path.Combine(startupDir, "LocationGlue.lnk");
+        // If not admin, re-launch ourselves elevated
+        if (!IsElevated())
+        {
+            Console.WriteLine("[INFO] Administrator privileges required. Elevating...");
+            var selfPsi = new ProcessStartInfo
+            {
+                FileName = GetExePath(),
+                Arguments = "install",
+                UseShellExecute = true,
+                Verb = "runas",  // Triggers UAC prompt
+            };
+            try
+            {
+                var selfP = Process.Start(selfPsi);
+                selfP.WaitForExit();
+                Environment.Exit(selfP.ExitCode);
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // User declined UAC prompt
+                Console.Error.WriteLine("[ERR] Administrator privileges required to create scheduled task.");
+                Environment.Exit(1);
+            }
+        }
 
-        // Create shortcut via WScript.Shell COM
-        Type shellType = Type.GetTypeFromProgID("WScript.Shell");
-        dynamic shell = Activator.CreateInstance(shellType);
-        dynamic shortcut = shell.CreateShortcut(shortcutPath);
-        shortcut.TargetPath = exePath;
-        shortcut.Arguments = "run";
-        shortcut.WindowStyle = 7; // Minimized
-        shortcut.WorkingDirectory = System.IO.Path.GetDirectoryName(exePath);
-        shortcut.Save();
+        string exePath = GetExePath();
+        string xmlFile = System.IO.Path.GetTempFileName();
+        string userId  = Environment.UserDomainName + "\\" + Environment.UserName;
 
-        Console.WriteLine("[OK]  Startup shortcut created: {0}", shortcutPath);
-        Console.WriteLine("[OK]  LocationGlue installed. Log out and back in to start.");
+        try
+        {
+            // Write task XML (avoids schtasks argument-quoting issues with paths containing spaces)
+            string xml = string.Format(TaskXmlFmt, userId, exePath);
+            System.IO.File.WriteAllText(xmlFile, xml);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName  = "schtasks",
+                Arguments = string.Format("/create /tn \"{0}\" /xml \"{1}\" /f", TaskName, xmlFile),
+                UseShellExecute = false,
+                CreateNoWindow  = true,
+                WindowStyle     = ProcessWindowStyle.Hidden,
+            };
+
+            using (var p = Process.Start(psi))
+            {
+                p.WaitForExit(60000);
+                if (p.ExitCode != 0)
+                {
+                    Console.Error.WriteLine("[ERR] schtasks exited with code {0}", p.ExitCode);
+                    Environment.Exit(1);
+                }
+            }
+
+            Console.WriteLine("[OK]  Scheduled task '{0}' created.", TaskName);
+            Console.WriteLine("[OK]  LocationGlue will start automatically at every logon.");
+        }
+        finally
+        {
+            try { System.IO.File.Delete(xmlFile); } catch { }
+        }
     }
 
     static void Uninstall()
     {
+        // If not admin, re-launch ourselves elevated
+        if (!IsElevated())
+        {
+            Console.WriteLine("[INFO] Administrator privileges required. Elevating...");
+            var selfPsi = new ProcessStartInfo
+            {
+                FileName = GetExePath(),
+                Arguments = "uninstall",
+                UseShellExecute = true,
+                Verb = "runas",
+            };
+            try
+            {
+                var selfP = Process.Start(selfPsi);
+                selfP.WaitForExit();
+                Environment.Exit(selfP.ExitCode);
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                Console.Error.WriteLine("[ERR] Administrator privileges required to remove scheduled task.");
+                Environment.Exit(1);
+            }
+        }
+
         int selfPid = Process.GetCurrentProcess().Id;
 
         // Helper: count OTHER LocationGlue instances (excluding this uninstaller)
@@ -124,10 +235,7 @@ class LocationGlue
             return n;
         };
 
-        // Step 1: Try graceful shutdown via named event.
-        // This lets the running instance call watcher.Stop() + Dispose(),
-        // which cleanly releases the location session so Windows updates
-        // the tray icon immediately — no reboot required.
+        // Step 1: Graceful shutdown via named event
         if (otherCount() > 0)
         {
             try
@@ -146,10 +254,10 @@ class LocationGlue
                     }
                 }
             }
-            catch { /* best effort — fall through to hard kill */ }
+            catch { /* best effort */ }
         }
 
-        // Step 2: Hard kill any stragglers (excluding self!)
+        // Step 2: Hard kill any stragglers
         foreach (var p in Process.GetProcessesByName("LocationGlue"))
         {
             if (p.Id == selfPid) continue;
@@ -157,25 +265,30 @@ class LocationGlue
         }
         Console.WriteLine("[OK]  Stopped running instances");
 
-        // Remove shortcut
-        string shortcutPath = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.Startup),
-            "LocationGlue.lnk");
-        if (System.IO.File.Exists(shortcutPath))
+        // Step 3: Remove scheduled task
+        var psiTask = new ProcessStartInfo
         {
-            System.IO.File.Delete(shortcutPath);
-            Console.WriteLine("[OK]  Startup shortcut removed");
+            FileName  = "schtasks",
+            Arguments = string.Format("/delete /tn \"{0}\" /f", TaskName),
+            UseShellExecute = false,
+            CreateNoWindow  = true,
+            WindowStyle     = ProcessWindowStyle.Hidden,
+        };
+        using (var p = Process.Start(psiTask))
+        {
+            p.WaitForExit(30000);
+            if (p.ExitCode == 0)
+                Console.WriteLine("[OK]  Scheduled task removed");
+            else
+                Console.WriteLine("[INFO] No scheduled task to remove (code {0})", p.ExitCode);
         }
 
-        // Step 3: Restart explorer to force taskbar to re-read location icon state
+        // Step 4: Restart explorer to force taskbar refresh
         try
         {
             Console.WriteLine("[LG] Restarting taskbar to refresh icon...");
-            foreach (var p in Process.GetProcessesByName("explorer"))
-            {
-                p.Kill();
-            }
-            // Windows auto-restarts explorer; also launch explicitly for safety
+            foreach (var ep in Process.GetProcessesByName("explorer"))
+                ep.Kill();
             Process.Start("explorer.exe");
             Console.WriteLine("[OK]  Taskbar refreshed");
         }
@@ -187,21 +300,51 @@ class LocationGlue
     static void Status()
     {
         Console.WriteLine("========================================");
-        Console.WriteLine("  LocationGlue v1.1.1");
+        Console.WriteLine("  LocationGlue v1.2.0");
         Console.WriteLine("  Keep Windows 11 location icon steady");
         Console.WriteLine("========================================");
         Console.WriteLine();
 
-        // Install status
+        // ---- Scheduled task check ----
+        var psiTask = new ProcessStartInfo
+        {
+            FileName  = "schtasks",
+            Arguments = string.Format("/query /tn \"{0}\" /fo csv /nh", TaskName),
+            UseShellExecute = false,
+            CreateNoWindow  = true,
+            WindowStyle     = ProcessWindowStyle.Hidden,
+            RedirectStandardOutput = true,
+            RedirectStandardError  = true,
+        };
+
+        bool taskExists = false;
+        try
+        {
+            using (var p = Process.Start(psiTask))
+            {
+                string output = p.StandardOutput.ReadToEnd();
+                p.WaitForExit(15000);
+                taskExists = p.ExitCode == 0 && output.Contains(TaskName);
+            }
+        }
+        catch { /* keep default false */ }
+
+        string statusText = taskExists ? "INSTALLED" : "NOT INSTALLED";
+        Console.WriteLine("  Auto-start:  [{0}]  (Task Scheduler: {1})", statusText, TaskName);
+
+        // ---- Check Startup shortcut (legacy) ----
         string shortcutPath = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.Startup),
             "LocationGlue.lnk");
-        bool installed = System.IO.File.Exists(shortcutPath);
-        Console.WriteLine("  Auto-start:  [{0}]  {1}",
-            installed ? "INSTALLED" : " NOT INSTALLED",
-            installed ? shortcutPath : "");
+        if (System.IO.File.Exists(shortcutPath))
+        {
+            Console.WriteLine("  [NOTE] Legacy Startup shortcut still exists.");
+            Console.WriteLine("         Run 'install' again to migrate to Task Scheduler.");
+        }
 
-        // Running instances (excluding self)
+        Console.WriteLine();
+
+        // ---- Running instances ----
         int selfPid = Process.GetCurrentProcess().Id;
         var running = Process.GetProcessesByName("LocationGlue");
         int otherCount = 0;
@@ -214,7 +357,6 @@ class LocationGlue
             string uptimeStr = uptime.TotalDays >= 1
                 ? string.Format("{0}d {1}h {2}m", (int)uptime.TotalDays, uptime.Hours, uptime.Minutes)
                 : string.Format("{0}h {1}m {2}s", uptime.Hours, uptime.Minutes, uptime.Seconds);
-            Console.WriteLine();
             Console.WriteLine("  Running instance #{0}:", otherCount);
             Console.WriteLine("    PID:       {0}", p.Id);
             Console.WriteLine("    Started:   {0:yyyy-MM-dd HH:mm:ss}", p.StartTime);
@@ -224,7 +366,6 @@ class LocationGlue
 
         if (otherCount == 0)
         {
-            Console.WriteLine();
             Console.WriteLine("  Status:      NOT RUNNING");
         }
         else
@@ -233,19 +374,159 @@ class LocationGlue
             Console.WriteLine("  Total running: {0} instance(s)", otherCount);
         }
 
-        // Self info
         Console.WriteLine();
         Console.WriteLine("  Exe:        {0}", Process.GetCurrentProcess().MainModule.FileName);
         Console.WriteLine("========================================");
     }
 
+    static bool IsTaskInstalled()
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName  = "schtasks",
+                Arguments = string.Format("/query /tn \"{0}\" /fo csv /nh", TaskName),
+                UseShellExecute = false,
+                CreateNoWindow  = true,
+                WindowStyle     = ProcessWindowStyle.Hidden,
+                RedirectStandardOutput = true,
+                RedirectStandardError  = true,
+            };
+            using (var p = Process.Start(psi))
+            {
+                string output = p.StandardOutput.ReadToEnd();
+                p.WaitForExit(15000);
+                return p.ExitCode == 0 && output.Contains(TaskName);
+            }
+        }
+        catch { return false; }
+    }
+
+    static void SetupInteractive()
+    {
+        // Elevate the entire interactive session upfront
+        if (!IsElevated())
+        {
+            Console.WriteLine("[INFO] Administrator privileges required. Elevating...");
+            var selfPsi = new ProcessStartInfo
+            {
+                FileName = GetExePath(),
+                Arguments = "setup",
+                UseShellExecute = true,
+                Verb = "runas",
+            };
+            try
+            {
+                var selfP = Process.Start(selfPsi);
+                selfP.WaitForExit();
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                Console.Error.WriteLine("[ERR] Administrator privileges required.");
+            }
+            return;
+        }
+
+        bool installed = IsTaskInstalled();
+
+        Console.WriteLine();
+        Console.WriteLine("  ============================================");
+        Console.WriteLine("    LocationGlue v1.2.0 - Setup");
+        Console.WriteLine("    Keep Windows 11 location icon always visible");
+        Console.WriteLine("  ============================================");
+        Console.WriteLine();
+        Console.WriteLine(installed
+            ? "  Status: [INSTALLED]  (Task Scheduler: {0})"
+            : "  Status: [NOT INSTALLED]", TaskName);
+        Console.WriteLine();
+
+        if (installed)
+        {
+            Console.WriteLine("  [U] Uninstall");
+            Console.WriteLine("  [S] Status");
+            Console.WriteLine("  [R] Reinstall");
+            Console.WriteLine("  [Q] Quit");
+        }
+        else
+        {
+            Console.WriteLine("  [I] Install and start");
+            Console.WriteLine("  [Q] Quit");
+        }
+        Console.WriteLine();
+
+        string line = (Console.ReadLine() ?? "").Trim().ToUpper();
+        Console.WriteLine();
+
+        if (line == "I" && !installed)
+        {
+            // Clean up any stale state first
+            try { Uninstall(); } catch { }
+            Install();
+            Console.WriteLine();
+            Console.WriteLine("Starting now...");
+            StartRunProcess();
+            Console.WriteLine("[OK] LocationGlue is running.");
+        }
+        else if (line == "U" && installed)
+        {
+            Uninstall();
+        }
+        else if (line == "S" && installed)
+        {
+            Status();
+        }
+        else if (line == "R" && installed)
+        {
+            Uninstall();
+            foreach (var p in Process.GetProcessesByName("LocationGlue"))
+            {
+                try { p.Kill(); } catch { }
+            }
+            Thread.Sleep(2000);
+            Install();
+            Console.WriteLine();
+            StartRunProcess();
+            Console.WriteLine("[DONE] LocationGlue reinstalled and running.");
+        }
+        else if (line == "Q")
+        {
+            Console.WriteLine("Bye.");
+        }
+        else
+        {
+            Console.WriteLine("Invalid choice.");
+        }
+
+        Console.WriteLine();
+        Console.Write("Press Enter to exit...");
+        Console.ReadLine();
+    }
+
+    static void StartRunProcess()
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = GetExePath(),
+                Arguments = "run",
+                UseShellExecute = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
+            };
+            Process.Start(psi);
+        }
+        catch { /* best effort */ }
+    }
+
     static void PrintUsage()
     {
-        Console.WriteLine("LocationGlue v1.1.1 — Keep location icon always visible (.NET Framework 4.8)");
+        Console.WriteLine("LocationGlue v1.2.0 — Keep location icon always visible (.NET Framework 4.8)");
         Console.WriteLine();
-        Console.WriteLine("  LocationGlue.exe            Run foreground (Ctrl+C to stop)");
-        Console.WriteLine("  LocationGlue.exe install    Install to startup folder");
-        Console.WriteLine("  LocationGlue.exe uninstall  Remove from startup");
+        Console.WriteLine("  LocationGlue.exe            Run foreground");
+        Console.WriteLine("  LocationGlue.exe setup      Interactive setup menu");
+        Console.WriteLine("  LocationGlue.exe install    Install scheduled task (auto-start at logon)");
+        Console.WriteLine("  LocationGlue.exe uninstall  Remove scheduled task");
         Console.WriteLine("  LocationGlue.exe status     Show install & running status");
     }
 }

@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/platform-Windows%2011-0078D6?logo=windows&logoColor=white" alt="Windows 11">
   <img src="https://img.shields.io/badge/.NET-4.8-512BD4?logo=.net&logoColor=white" alt=".NET Framework 4.8">
-  <img src="https://img.shields.io/badge/size-11.5%20KB-brightgreen" alt="11.5 KB">
+  <img src="https://img.shields.io/badge/size-13.5%20KB-brightgreen" alt="13.5 KB">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License">
 </p>
 
@@ -25,14 +25,14 @@ Windows 11 shows a "Location In Use" icon (an arrow) in the system tray whenever
 
 ### How It Works
 
-Instead of fighting Windows to hide the icon (which doesn't work reliably on newer builds), LocationGlue opens a single `GeoCoordinateWatcher` session with minimal accuracy and a 10km movement threshold. The icon stays on steadily. That's it.
+Instead of fighting Windows to hide the icon (which doesn't work reliably on newer builds), LocationGlue opens a single `GeoCoordinateWatcher` session with minimal accuracy and a 10km movement threshold. The icon stays on steadily. Auto-starts via Task Scheduler at every logon — no window, no console. That's it.
 
 | Metric | Value |
 |--------|-------|
-| Binary size | 11.5 KB |
+| Binary size | 13.5 KB |
 | Private memory | ~8 MB |
 | CPU usage | 0% when idle |
-| Window | None (background process) |
+| Window | None (Task Scheduler runs hidden at logon) |
 | Dependencies | .NET Framework 4.8 (built into Windows 11) |
 | Battery impact | Minimal (30-min interval, low accuracy) |
 
@@ -40,7 +40,7 @@ Instead of fighting Windows to hide the icon (which doesn't work reliably on new
 
 **Double-click `Setup.cmd`** — the only file you need. It auto-detects your install state:
 
-- **Not installed?** Press `I` to install and start immediately.
+- **Not installed?** Press `I` to install and start immediately (auto-start via Task Scheduler at every logon).
 - **Already installed?** Press `U` to uninstall, `S` for status, `R` to reinstall.
 
 One file, one click. Done.
@@ -53,14 +53,14 @@ No extra tools required — uses the C# compiler included with Windows:
 
 ```powershell
 C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe `
-  -out:src\LocationGlue.exe -target:exe -platform:x64 -optimize `
+  -out:src\LocationGlue.exe -target:winexe -platform:x64 -optimize `
   -reference:System.Device.dll -reference:Microsoft.CSharp.dll `
   src\ProgramFx.cs
 ```
 
 ### FAQ
 
-**Q: Is this a virus?** No. The source code is ~250 lines of C# — read it yourself. It only calls `GeoCoordinateWatcher.Start()` and sleeps. No network, no files, no registry.
+**Q: Is this a virus?** No. The source code is ~250 lines of C# — read it yourself. It only calls `GeoCoordinateWatcher.Start()` and sleeps. No network, no files. Creates only a Task Scheduler task for auto-start.
 
 **Q: Will this affect my privacy?** No. The location data is never read, stored, or transmitted. The watcher is opened purely to keep the icon visible.
 
@@ -109,14 +109,14 @@ Windows 11 在系统托盘区显示一个"位置正在使用"图标（一个箭�
 
 ```powershell
 C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe `
-  -out:src\LocationGlue.exe -target:exe -platform:x64 -optimize `
+  -out:src\LocationGlue.exe -target:winexe -platform:x64 -optimize `
   -reference:System.Device.dll -reference:Microsoft.CSharp.dll `
   src\ProgramFx.cs
 ```
 
 ### 常见问题
 
-**Q: 这是病毒吗？** 不是。源代码只有 ~250 行 C#——自己看。它只调用 `GeoCoordinateWatcher.Start()` 然后休眠。无网络、无文件写入、无注册表操作。
+**Q: 这是病毒吗？** 不是。源代码只有 ~250 行 C#——自己看。它只调用 `GeoCoordinateWatcher.Start()` 然后休眠。无网络、无文件写入。仅创建一个 Task Scheduler 任务用于开机自启。
 
 **Q: 会影响隐私吗？** 不会。位置数据从未被读取、存储或传输。打开 watcher 纯粹是为了保持图标可见。
 
