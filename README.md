@@ -51,12 +51,6 @@ One file, one click. Done.
 
 No extra tools required — uses the C# compiler included with Windows:
 
-```cmd
-build.cmd
-```
-
-Or manually:
-
 ```powershell
 C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe `
   -out:src\LocationSteady.exe -target:winexe -platform:x64 -optimize `
@@ -112,12 +106,6 @@ Windows 11 在系统托盘区显示一个"位置正在使用"图标（一个箭�
 ### 从源码编译
 
 无需额外工具——使用 Windows 自带的 C# 编译器：
-
-```cmd
-build.cmd
-```
-
-或手动：
 
 ```powershell
 C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe `

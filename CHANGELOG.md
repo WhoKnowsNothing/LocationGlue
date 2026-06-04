@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.1] — 2026-06-04
+
+### Removed
+
+- **`build.cmd`** — No longer needed. The compiled `LocationSteady.exe` is shipped directly in the repo. Developers can use the documented `csc.exe` one-liner to recompile from source.
+
 ## [1.1.0] — 2026-06-03
 
 ### Changed
