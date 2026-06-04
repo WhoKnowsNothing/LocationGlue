@@ -6,9 +6,9 @@ title LocationGlue Setup
 :: Double-click me. I handle everything.
 :: ==============================================
 
-set "EXE=%~dp0src\LocationSteady.exe"
-if not exist "%EXE%" set "EXE=%~dp0LocationSteady.exe"
-set "SHORTCUT=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\LocationSteady.lnk"
+set "EXE=%~dp0src\LocationGlue.exe"
+if not exist "%EXE%" set "EXE=%~dp0LocationGlue.exe"
+set "SHORTCUT=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\LocationGlue.lnk"
 
 :: ---- Detect state and jump to the right menu ----
 if exist "%SHORTCUT%" goto menu_installed
@@ -20,7 +20,7 @@ goto menu_not_installed
 cls
 echo.
 echo  ============================================
-echo    LocationGlue v1.1.0 - Setup
+echo    LocationGlue v1.1.1 - Setup
 echo    Keep Windows 11 location icon always visible
 echo  ============================================
 echo.
@@ -40,7 +40,7 @@ goto quit
 cls
 echo.
 echo  ============================================
-echo    LocationGlue v1.1.0 - Setup
+echo    LocationGlue v1.1.1 - Setup
 echo    Keep Windows 11 location icon always visible
 echo  ============================================
 echo.
@@ -64,8 +64,8 @@ goto quit
     echo.
     echo Installing...
     if not exist "%EXE%" (
-        echo [ERROR] LocationSteady.exe not found.
-        echo Expected: %~dp0src\LocationSteady.exe
+        echo [ERROR] LocationGlue.exe not found.
+        echo Expected: %~dp0src\LocationGlue.exe
         echo Make sure you extracted all files from the zip.
         pause
         exit /b 1
@@ -80,7 +80,7 @@ goto quit
     echo.
     echo Starting now...
     start "" /MIN "%EXE%" run
-    echo [OK] LocationSteady is running.
+    echo [OK] LocationGlue is running.
     echo.
     echo The location icon in your system tray should now
     echo stay steadily visible. No more blinking!
@@ -93,9 +93,15 @@ goto quit
 :do_uninstall
     echo.
     echo Uninstalling...
-    taskkill /f /im "LocationSteady.exe" >nul 2>&1
-    if exist "%EXE%" "%EXE%" uninstall
-    if exist "%SHORTCUT%" del /q "%SHORTCUT%" 2>nul
+    if exist "%EXE%" (
+        "%EXE%" uninstall
+    ) else (
+        taskkill /f /im "LocationGlue.exe" >nul 2>&1
+        if exist "%SHORTCUT%" del /q "%SHORTCUT%" 2>nul
+        echo Restarting taskbar to refresh icon...
+        taskkill /f /im explorer.exe >nul 2>&1
+        start explorer.exe
+    )
     echo [DONE] LocationGlue has been removed.
     echo.
     echo The location icon will now behave normally.
@@ -108,7 +114,7 @@ goto quit
     if exist "%EXE%" (
         "%EXE%" status
     ) else (
-        echo [WARN] LocationSteady.exe not found.
+        echo [WARN] LocationGlue.exe not found.
         if exist "%SHORTCUT%" (
             echo Startup shortcut: [INSTALLED]
         ) else (
@@ -122,8 +128,8 @@ goto quit
 :do_reinstall
     echo.
     echo Reinstalling...
-    taskkill /f /im "LocationSteady.exe" >nul 2>&1
     if exist "%EXE%" "%EXE%" uninstall >nul 2>&1
+    taskkill /f /im "LocationGlue.exe" >nul 2>&1
     timeout /t 2 /nobreak >nul
     "%EXE%" install
     start "" /MIN "%EXE%" run

@@ -2,7 +2,7 @@
 bin/
 obj/
 *.exe
-!src/LocationSteady.exe
+!src/LocationGlue.exe
 
 # IDE / Editor
 .vs/

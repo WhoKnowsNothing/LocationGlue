@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    [ALTERNATIVE METHOD] Install LocationSteady via PowerShell.
+    [ALTERNATIVE METHOD] Install LocationGlue via PowerShell.
     For most users, double-clicking Setup.cmd is recommended instead.
     This script is for advanced users who prefer the command line.
 #>
@@ -10,17 +10,17 @@ param(
     [string]$Command = "install"
 )
 
-$ExeName = "LocationSteady.exe"
-$TaskName = "LocationSteady"
+$ExeName = "LocationGlue.exe"
+$TaskName = "LocationGlue"
 
 # Paths: exe lives next to this script
 $ScriptDir = Split-Path -Parent $PSCommandPath
 $ExePath = Join-Path $ScriptDir $ExeName
 $StartupDir = [Environment]::GetFolderPath("Startup")
-$ShortcutPath = Join-Path $StartupDir "LocationSteady.lnk"
+$ShortcutPath = Join-Path $StartupDir "LocationGlue.lnk"
 
 function Install-Steady {
-    Write-Host "=== LocationSteady Install ===" -ForegroundColor Cyan
+    Write-Host "=== LocationGlue Install ===" -ForegroundColor Cyan
 
     if (-not (Test-Path $ExePath)) {
         Write-Host "[ERR] $ExeName not found at: $ExePath" -ForegroundColor Red
@@ -37,26 +37,26 @@ function Install-Steady {
     $Shortcut.Save()
 
     Write-Host "[OK]  Startup shortcut created: $ShortcutPath" -ForegroundColor Green
-    Write-Host "[INFO] LocationSteady will start minimized at every logon."
+    Write-Host "[INFO] LocationGlue will start minimized at every logon."
     Write-Host "[TIP]  Log out and back in, or run the exe directly:"
     Write-Host "       $ExePath"
 
     # Also run it now
     Write-Host ""
-    Write-Host "[INFO] Starting LocationSteady now..."
+    Write-Host "[INFO] Starting LocationGlue now..."
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $ExePath
     $psi.Arguments = "run"
     $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Minimized
     [System.Diagnostics.Process]::Start($psi) | Out-Null
-    Write-Host "[OK]  LocationSteady started. Location icon should now be always visible." -ForegroundColor Green
+    Write-Host "[OK]  LocationGlue started. Location icon should now be always visible." -ForegroundColor Green
 }
 
 function Uninstall-Steady {
-    Write-Host "=== LocationSteady Uninstall ===" -ForegroundColor Cyan
+    Write-Host "=== LocationGlue Uninstall ===" -ForegroundColor Cyan
 
     # Kill any running instances
-    Get-Process -Name "LocationSteady" -ErrorAction SilentlyContinue | Stop-Process -Force
+    Get-Process -Name "LocationGlue" -ErrorAction SilentlyContinue | Stop-Process -Force
     Write-Host "[OK]  Stopped running instances"
 
     # Remove startup shortcut
@@ -67,11 +67,11 @@ function Uninstall-Steady {
         Write-Host "[INFO] No startup shortcut found"
     }
 
-    Write-Host "[DONE] LocationSteady uninstalled." -ForegroundColor Green
+    Write-Host "[DONE] LocationGlue uninstalled." -ForegroundColor Green
 }
 
 function Show-Status {
-    Write-Host "=== LocationSteady Status ===" -ForegroundColor Cyan
+    Write-Host "=== LocationGlue Status ===" -ForegroundColor Cyan
     Write-Host ""
 
     # Startup shortcut
@@ -82,7 +82,7 @@ function Show-Status {
     }
 
     # Running instances
-    $running = Get-Process -Name "LocationSteady" -ErrorAction SilentlyContinue
+    $running = Get-Process -Name "LocationGlue" -ErrorAction SilentlyContinue
     Write-Host "  Running instances: $($running.Count)"
     if ($running) {
         foreach ($p in $running) {

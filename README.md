@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/platform-Windows%2011-0078D6?logo=windows&logoColor=white" alt="Windows 11">
   <img src="https://img.shields.io/badge/.NET-4.8-512BD4?logo=.net&logoColor=white" alt=".NET Framework 4.8">
-  <img src="https://img.shields.io/badge/size-9.5%20KB-brightgreen" alt="9.5 KB">
+  <img src="https://img.shields.io/badge/size-11.5%20KB-brightgreen" alt="11.5 KB">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License">
 </p>
 
@@ -29,7 +29,7 @@ Instead of fighting Windows to hide the icon (which doesn't work reliably on new
 
 | Metric | Value |
 |--------|-------|
-| Binary size | 9.5 KB |
+| Binary size | 11.5 KB |
 | Private memory | ~8 MB |
 | CPU usage | 0% when idle |
 | Window | None (background process) |
@@ -45,7 +45,7 @@ Instead of fighting Windows to hide the icon (which doesn't work reliably on new
 
 One file, one click. Done.
 
-> **Terminal users:** `LocationSteady.exe install|uninstall|status` works directly, or `powershell -File src\InstallSteady.ps1 -Command install`.
+> **Terminal users:** `LocationGlue.exe install|uninstall|status` works directly, or `powershell -File src\InstallGlue.ps1 -Command install`.
 
 ### Build from Source
 
@@ -53,14 +53,14 @@ No extra tools required — uses the C# compiler included with Windows:
 
 ```powershell
 C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe `
-  -out:src\LocationSteady.exe -target:winexe -platform:x64 -optimize `
+  -out:src\LocationGlue.exe -target:exe -platform:x64 -optimize `
   -reference:System.Device.dll -reference:Microsoft.CSharp.dll `
   src\ProgramFx.cs
 ```
 
 ### FAQ
 
-**Q: Is this a virus?** No. The source code is 157 lines of C# — read it yourself. It only calls `GeoCoordinateWatcher.Start()` and sleeps. No network, no files, no registry.
+**Q: Is this a virus?** No. The source code is ~250 lines of C# — read it yourself. It only calls `GeoCoordinateWatcher.Start()` and sleeps. No network, no files, no registry.
 
 **Q: Will this affect my privacy?** No. The location data is never read, stored, or transmitted. The watcher is opened purely to keep the icon visible.
 
@@ -85,7 +85,7 @@ Windows 11 在系统托盘区显示一个"位置正在使用"图标（一个箭�
 
 | 指标 | 数值 |
 |------|------|
-| 二进制大小 | 9.5 KB |
+| 二进制大小 | 11.5 KB |
 | 私有内存 | ~8 MB |
 | CPU 占用 | 空闲时 0% |
 | 窗口 | 无（后台进程） |
@@ -101,7 +101,7 @@ Windows 11 在系统托盘区显示一个"位置正在使用"图标（一个箭�
 
 一个文件，一键搞定。
 
-> **终端用户:** `LocationSteady.exe install|uninstall|status` 直接可用，或 `powershell -File src\InstallSteady.ps1 -Command install`。
+> **终端用户:** `LocationGlue.exe install|uninstall|status` 直接可用，或 `powershell -File src\InstallGlue.ps1 -Command install`。
 
 ### 从源码编译
 
@@ -109,14 +109,14 @@ Windows 11 在系统托盘区显示一个"位置正在使用"图标（一个箭�
 
 ```powershell
 C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe `
-  -out:src\LocationSteady.exe -target:winexe -platform:x64 -optimize `
+  -out:src\LocationGlue.exe -target:exe -platform:x64 -optimize `
   -reference:System.Device.dll -reference:Microsoft.CSharp.dll `
   src\ProgramFx.cs
 ```
 
 ### 常见问题
 
-**Q: 这是病毒吗？** 不是。源代码只有 157 行 C#——自己看。它只调用 `GeoCoordinateWatcher.Start()` 然后休眠。无网络、无文件写入、无注册表操作。
+**Q: 这是病毒吗？** 不是。源代码只有 ~250 行 C#——自己看。它只调用 `GeoCoordinateWatcher.Start()` 然后休眠。无网络、无文件写入、无注册表操作。
 
 **Q: 会影响隐私吗？** 不会。位置数据从未被读取、存储或传输。打开 watcher 纯粹是为了保持图标可见。
 

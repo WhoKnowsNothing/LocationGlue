@@ -2,7 +2,7 @@
 
 ## What Is This Icon?
 
-The "Location In Use" icon (a circle/dot) appears in the Windows 11 system tray when any
+The "Location In Use" icon (an arrow) appears in the Windows 11 system tray when any
 application accesses the device's location. It is NOT a regular `Shell_NotifyIcon` icon from
 a third-party app — it is rendered by `explorer.exe` itself as part of the Windows shell.
 
