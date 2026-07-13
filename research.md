@@ -10,8 +10,8 @@ a third-party app — it is rendered by `explorer.exe` itself as part of the Win
 
 | Approach | Complexity | Permanence | Risk | Background Process |
 |----------|-----------|------------|------|-------------------|
-| Reg: `LocationNotificationsAllowed=0` | Minimal | High (survives reboots) | Low | **None** (logon script) |
-| Reg: `ShowGlobalPrompts=0` (secondary) | Minimal | High | Low | **None** |
+| Reg: `LocationNotificationsAllowed=0` | Minimal | **Does not work** — icon stays visible | Low | **None** (logon script) |
+| Reg: `ShowGlobalPrompts=0` (secondary) | Minimal | **Does not work** — icon stays visible | Low | **None** |
 | Reg: ACL hardening | Low | Very High | Low-Medium | **None** |
 | Built-in Settings toggle (Build 25977+) | None | High | None | **None** |
 | `TrayNotify\IconStreams` patch | Medium | Medium (version-dep) | Medium | **None** |
@@ -26,13 +26,13 @@ a third-party app — it is rendered by `explorer.exe` itself as part of the Win
 **Key:** `HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy`
 **Value:** `LocationNotificationsAllowed` (DWORD, 0=hide icon, 1=show icon)
 
-This is the **OFFICIAL** mechanism. Explorer checks this value when deciding whether to
-show the location notification icon. Setting it to 0 hides the icon while keeping
-location services fully functional.
+This was believed to be the **OFFICIAL** mechanism — Explorer supposedly checks this
+value when deciding whether to show the location notification icon.
 
-**Persistence:** Windows does NOT reset this value during normal sessions. It may be
-reset during major feature updates. A one-shot logon scheduled task is sufficient for
-the vast majority of use cases.
+**Status: Confirmed NOT working.** Setting this value to 0 does not hide the icon —
+the icon stays visible immediately after applying the change, no delay or feature
+update required. Theoretically correct per older documentation, but does not hold up
+in practice on current Windows 11 builds.
 
 ---
 
@@ -41,11 +41,11 @@ the vast majority of use cases.
 **Key:** `HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location`
 **Value:** `ShowGlobalPrompts` (DWORD, 0=disable prompts, 1=enable)
 
-This is a secondary mechanism that controls whether global location prompts are shown.
-Setting it to 0 provides defense-in-depth alongside `LocationNotificationsAllowed=0`.
+This was believed to be a secondary mechanism controlling whether global location
+prompts are shown, intended as defense-in-depth alongside `LocationNotificationsAllowed=0`.
 
-Discovered during research (2026-06-03) — this key is independent of the Privacy key
-and provides another layer of icon suppression.
+**Status: Confirmed NOT working.** Same as Approach 1 — setting this to 0 does not
+suppress the icon. Independent of the Privacy key, but equally ineffective.
 
 ---
 
@@ -91,8 +91,11 @@ The Windhawk mod "Taskbar tray system icon tweaks" works by:
 through Windhawk's in-app catalog. The XAML manipulation approach fundamentally requires
 runtime code injection and cannot be replicated without a persistent injection mechanism.
 
-**We do NOT implement this approach.** Approaches 1+2+3 together provide equivalent
-functionality without DLL injection or background processes.
+**We do NOT implement this approach.** Approaches 1 and 2 are confirmed not to work in
+practice, and Approach 3 (ACL hardening) only protects values that don't do anything —
+none of the registry-based approaches provide a working substitute for DLL injection.
+This is why LocationGlue takes a different route entirely: keeping the icon steady
+via a persistent `GeoCoordinateWatcher` session instead of trying to hide it.
 
 ---
 
